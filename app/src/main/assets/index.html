@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#4F46E5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="مفكرتي" />
+  <title>مفكرتي - التقويم والمهام والملاحظات</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Cairo', 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .sheet-backdrop {
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(3px);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-sheet {
+      animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col items-center justify-center" id="rootBody">
+
+  <!-- App Container: Full screen on mobile, clean centered mobile shell on desktop -->
+  <div id="appShell" class="w-full max-w-md min-h-screen sm:min-h-[820px] sm:max-h-[92vh] sm:my-3 sm:rounded-[36px] sm:shadow-2xl sm:border-[6px] sm:border-slate-800 bg-slate-50 text-slate-900 flex flex-col relative overflow-hidden transition-colors duration-200">
+
+    <!-- Top App Bar -->
+    <header class="px-4 pt-4 pb-3 bg-white border-b border-slate-200/80 flex items-center justify-between shrink-0 z-10" id="topAppBar">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+          📅
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-indigo-600 leading-none mb-0.5" id="appSubtitle">مفكرتي الشخصية</p>
+          <h1 class="text-base font-bold tracking-tight leading-tight" id="appTitle">نوفمبر 2026</h1>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button type="button" id="btnJumpToday" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition">
+          اليوم
+        </button>
+        <button type="button" id="btnSearchToggle" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-xs transition" title="بحث">
+          🔍
+        </button>
+        <button type="button" id="btnDarkToggle" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-xs transition" title="الوضع الليلي">
+          🌙
+        </button>
+        <button type="button" id="btnLangToggle" class="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 transition">
+          EN
+        </button>
+      </div>
+    </header>
+
+    <!-- Install / APK Info Banner (Dismissible) -->
+    <div id="installHintBanner" class="bg-indigo-600 text-white px-4 py-2 text-xs flex items-center justify-between gap-2 shrink-0">
+      <span id="installHintText">📲 لتثبيت التطبيق فوراً على جوالك: افتح قائمة المتصفح (⋮) واختر «الإضافة إلى الشاشة الرئيسية»</span>
+      <button type="button" id="btnDismissBanner" class="text-white/80 hover:text-white font-bold px-1">✕</button>
+    </div>
+
+    <!-- Expandable Search Bar -->
+    <div id="searchBarContainer" class="px-4 py-2 bg-white border-b border-slate-200 hidden shrink-0">
+      <div class="relative">
+        <input id="searchInput" type="text" placeholder="ابحث في المهام والملاحظات..." class="w-full rounded-2xl bg-slate-100 border border-slate-200 px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button type="button" id="btnClearSearch" class="absolute left-3 top-2 text-xs text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+    </div>
+
+    <!-- Main Scrollable Content -->
+    <main class="flex-1 overflow-y-auto no-scrollbar px-4 pt-3 pb-24 space-y-4" id="mainScrollArea">
+
+      <!-- SCREEN 1: CALENDAR -->
+      <section id="tabScreenCalendar" class="space-y-3.5">
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-200/80" id="calendarCard">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-1">
+              <button type="button" id="btnPrevMonth" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-base">‹</button>
+              <span class="text-sm font-bold px-1.5" id="monthYearLabel">نوفمبر 2026</span>
+              <button type="button" id="btnNextMonth" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-base">›</button>
+            </div>
+            <div class="inline-flex rounded-full bg-slate-100 p-0.5 text-[11px] font-semibold">
+              <button type="button" id="btnViewMonth" class="px-2.5 py-1 rounded-full bg-white shadow-sm text-indigo-700">شهري</button>
+              <button type="button" id="btnViewWeek" class="px-2.5 py-1 rounded-full text-slate-600">أسبوعي</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-400 mb-1.5" id="weekdaysHeader"></div>
+          <div class="grid grid-cols-7 gap-1 text-center" id="daysGrid"></div>
+
+          <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-600 inline-block"></span> <span id="lblLegendTask">مهام</span></span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> <span id="lblLegendNote">ملاحظات</span></span>
+            </div>
+            <span id="selectedDateBadge" class="font-bold text-indigo-600">3 نوفمبر 2026</span>
+          </div>
+        </div>
+
+        <!-- Quick Populate Strip -->
+        <div class="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl px-3.5 py-2.5">
+          <div>
+            <div class="text-xs font-bold text-indigo-950" id="populateHeading">تعبئة هذا اليوم</div>
+            <div class="text-[11px] text-indigo-700" id="populateSub">أضف مهام أو ملاحظات مخصصة</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btnDayAddTask" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-sm hover:bg-indigo-700 active:scale-95 transition">
+              + مهمة
+            </button>
+            <button type="button" id="btnDayAddNote" class="px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold shadow-sm hover:bg-amber-600 active:scale-95 transition">
+              + ملاحظة
+            </button>
+          </div>
+        </div>
+
+        <!-- Selected Day Agenda -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between px-1">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider" id="dayAgendaTitle">أجندة اليوم المختار</h2>
+            <span class="text-[11px] font-semibold text-slate-400" id="dayAgendaCount">0 عناصر</span>
+          </div>
+          <div id="dayAgendaContainer" class="space-y-2.5"></div>
+        </div>
+      </section>
+
+      <!-- SCREEN 2: TASKS (TO-DO LIST) -->
+      <section id="tabScreenTasks" class="space-y-3.5 hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl p-4 text-white shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <div class="text-xs text-indigo-100 font-medium" id="progressSub">إنجاز المهام</div>
+              <div class="text-base font-bold" id="progressMainText">تم إنجاز 0 من 0 مهام</div>
+            </div>
+            <div class="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center font-bold text-sm" id="progressPct">
+              0%
+            </div>
+          </div>
+          <div class="w-full h-2 rounded-full bg-white/20 overflow-hidden">
+            <div id="progressBarFill" class="h-full bg-white rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button type="button" data-filter="all" class="filter-chip px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-600 text-white shrink-0">الكل</button>
+          <button type="button" data-filter="pending" class="filter-chip px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-600 shrink-0">قيد الإنجاز</button>
+          <button type="button" data-filter="today" class="filter-chip px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-600 shrink-0">مهام اليوم المختار</button>
+          <button type="button" data-filter="completed" class="filter-chip px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-600 shrink-0">مكتملة</button>
+        </div>
+
+        <div id="tasksListContainer" class="space-y-2.5"></div>
+      </section>
+
+      <!-- SCREEN 3: NOTES WORKSPACE -->
+      <section id="tabScreenNotes" class="space-y-3.5 hidden">
+        <div class="flex items-center justify-between bg-white rounded-2xl px-3.5 py-2.5 border border-slate-200/80 shadow-sm">
+          <div class="text-xs font-bold text-slate-700" id="notesTotalLabel">الملاحظات المحفوظة</div>
+          <div class="flex items-center gap-1">
+            <button type="button" id="btnLayoutGrid" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700">شبكة ⊞</button>
+            <button type="button" id="btnLayoutList" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-500">قائمة ☰</button>
+          </div>
+        </div>
+
+        <div id="notesListContainer" class="grid grid-cols-2 gap-2.5"></div>
+      </section>
+
+    </main>
+
+    <!-- Floating Action Button (FAB) -->
+    <button type="button" id="mainFab" class="absolute bottom-20 left-5 z-20 px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/30 flex items-center gap-2 text-xs font-bold active:scale-95 transition">
+      <span class="text-base leading-none">＋</span>
+      <span id="mainFabText">تعبئة اليوم</span>
+    </button>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="mt-auto bg-white border-t border-slate-200 px-3 py-2 flex items-center justify-around shrink-0 z-10" id="bottomNav">
+      <button type="button" data-nav="calendar" class="bottom-nav-btn flex flex-col items-center gap-1 py-1 px-4 rounded-2xl">
+        <span class="px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold" id="pillCal">📅</span>
+        <span class="text-[11px] font-bold text-indigo-700" id="txtCal">التقويم</span>
+      </button>
+      <button type="button" data-nav="tasks" class="bottom-nav-btn flex flex-col items-center gap-1 py-1 px-4 rounded-2xl">
+        <span class="px-4 py-1 rounded-full text-slate-500 text-sm" id="pillTasks">✅</span>
+        <span class="text-[11px] font-semibold text-slate-500" id="txtTasks">المهام</span>
+      </button>
+      <button type="button" data-nav="notes" class="bottom-nav-btn flex flex-col items-center gap-1 py-1 px-4 rounded-2xl">
+        <span class="px-4 py-1 rounded-full text-slate-500 text-sm" id="pillNotes">📝</span>
+        <span class="text-[11px] font-semibold text-slate-500" id="txtNotes">الملاحظات</span>
+      </button>
+    </nav>
+
+    <!-- Modal Bottom Sheet -->
+    <div id="sheetOverlay" class="absolute inset-0 z-30 sheet-backdrop hidden flex-col justify-end">
+      <div class="bg-white text-slate-900 rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 animate-sheet max-h-[88%] overflow-y-auto">
+        <div class="w-10 h-1 rounded-full bg-slate-300 mx-auto mb-3"></div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold" id="modalHeading">إضافة عنصر جديد</h3>
+          <button type="button" id="btnCloseModal" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold">✕</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl mb-4">
+          <button type="button" id="btnTypeTask" class="py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-sm">✅ مهمة (To-Do)</button>
+          <button type="button" id="btnTypeNote" class="py-2 rounded-xl text-xs font-bold text-slate-600">📝 ملاحظة (Note)</button>
+        </div>
+
+        <form id="entryForm" class="space-y-3">
+          <input type="hidden" id="entryId" value="" />
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">العنوان</label>
+            <input id="entryTitle" type="text" required placeholder="اكتب عنوان المهمة أو الملاحظة..." class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">التاريخ</label>
+              <input id="entryDate" type="date" required class="w-full rounded-xl border border-slate-200 px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div id="entryTimeWrap">
+              <label class="block text-xs font-bold text-slate-700 mb-1">الوقت</label>
+              <input id="entryTime" type="time" value="10:00" class="w-full rounded-xl border border-slate-200 px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <div id="entryPriorityWrap">
+            <label class="block text-xs font-bold text-slate-700 mb-1">الأولوية</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" data-prio="high" class="prio-choice py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold">🔴 عالية</button>
+              <button type="button" data-prio="medium" class="prio-choice py-1.5 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-indigo-700 text-xs font-bold">🟡 متوسطة</button>
+              <button type="button" data-prio="low" class="prio-choice py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold">🟢 عادية</button>
+            </div>
+          </div>
+
+          <div id="entryColorWrap" class="hidden">
+            <label class="block text-xs font-bold text-slate-700 mb-1">لون بطاقة الملاحظة</label>
+            <div class="flex items-center gap-3">
+              <button type="button" data-clr="amber" class="clr-choice w-8 h-8 rounded-full bg-amber-100 border-2 border-amber-500 ring-2 ring-slate-900"></button>
+              <button type="button" data-clr="indigo" class="clr-choice w-8 h-8 rounded-full bg-indigo-100 border border-indigo-300"></button>
+              <button type="button" data-clr="emerald" class="clr-choice w-8 h-8 rounded-full bg-emerald-100 border border-emerald-300"></button>
+              <button type="button" data-clr="rose" class="clr-choice w-8 h-8 rounded-full bg-rose-100 border border-rose-300"></button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">التفاصيل / الملاحظات</label>
+            <textarea id="entryContent" rows="3" placeholder="أضف أي تفاصيل إضافية هنا..." class="w-full rounded-xl border border-slate-200 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+
+          <div class="flex items-center gap-2 pt-2">
+            <button type="button" id="btnDeleteEntry" class="hidden px-3.5 py-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold">
+              🗑️ حذف
+            </button>
+            <button type="submit" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md">
+              💾 حفظ
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'android_personal_planner_v1';
+
+    const defaultTasks = [
+      { id: 't1', title: 'مراجعة مهام الأسبوع القادم', content: 'تحديد الأولويات وتوزيع المواعيد على التقويم', date: '2026-11-03', time: '09:30', priority: 'high', completed: true },
+      { id: 't2', title: 'إنجاز التقرير الشهري للمشروع', content: 'إرفاق الملاحظات النهائية ومشاركتها مع الفريق', date: '2026-11-03', time: '13:00', priority: 'high', completed: false },
+      { id: 't3', title: 'تمرين مسائي لمدة 30 دقيقة', content: 'مشي سريع وتمارين إطالة', date: '2026-11-03', time: '17:30', priority: 'medium', completed: false },
+      { id: 't4', title: 'موعد زيارة الطبيب', content: 'الفحص الدوري السنوي', date: '2026-11-05', time: '11:00', priority: 'medium', completed: false }
+    ];
+
+    const defaultNotes = [
+      { id: 'n1', title: 'أفكار وملاحظات مهمة 💡', content: 'يمكنك إضافة أو تعديل أو حذف أي مهمة أو ملاحظة، وسيتم حفظها تلقائياً على جوالك.', date: '2026-11-03', color: 'amber' },
+      { id: 'n2', title: 'قائمة الكتب المقترحة 📚', content: '1. العادات الذرية\n2. العمل العميق\n3. فن اللامبالاة', date: '2026-11-03', color: 'indigo' },
+      { id: 'n3', title: 'أهداف الشهر 🎯', content: 'الالتزام بجدول النوم المبكر وتنظيم المهام يومياً في التقويم.', date: '2026-11-05', color: 'emerald' }
+    ];
+
+    const state = {
+      lang: 'ar',
+      dark: false,
+      tab: 'calendar',
+      calMode: 'month',
+      notesView: 'grid',
+      selectedDate: '2026-11-03',
+      month: 10,
+      year: 2026,
+      filter: 'all',
+      query: '',
+      sheetType: 'task',
+      prio: 'medium',
+      color: 'amber',
+      tasks: defaultTasks,
+      notes: defaultNotes
+    };
+
+    function loadStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.tasks)) state.tasks = parsed.tasks;
+          if (Array.isArray(parsed.notes)) state.notes = parsed.notes;
+          if (typeof parsed.dark === 'boolean') state.dark = parsed.dark;
+          if (parsed.lang) state.lang = parsed.lang;
+        }
+      } catch (e) {}
+    }
+
+    function saveStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          tasks: state.tasks,
+          notes: state.notes,
+          dark: state.dark,
+          lang: state.lang
+        }));
+      } catch (e) {}
+    }
+
+    const dict = {
+      ar: {
+        sub: 'مفكرتي الشخصية',
+        today: 'اليوم',
+        cal: 'التقويم',
+        tasks: 'المهام',
+        notes: 'الملاحظات',
+        month: 'شهري',
+        week: 'أسبوعي',
+        weekdays: ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+        months: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+        fabCal: 'تعبئة اليوم',
+        fabTask: 'مهمة جديدة',
+        fabNote: 'ملاحظة جديدة',
+        emptyDay: 'لا توجد عناصر في هذا اليوم. اضغط "+ مهمة" أو "+ ملاحظة" لتعبئته!',
+        edit: 'تعديل',
+        del: 'حذف',
+        high: 'عالية',
+        med: 'متوسطة',
+        low: 'عادية'
+      },
+      en: {
+        sub: 'Personal Planner',
+        today: 'Today',
+        cal: 'Calendar',
+        tasks: 'Tasks',
+        notes: 'Notes',
+        month: 'Month',
+        week: 'Week',
+        weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        fabCal: 'Populate Day',
+        fabTask: 'New Task',
+        fabNote: 'New Note',
+        emptyDay: 'No items for this date yet. Tap "+ Task" or "+ Note" to populate it!',
+        edit: 'Edit',
+        del: 'Delete',
+        high: 'High',
+        med: 'Medium',
+        low: 'Low'
+      }
+    };
+
+    function tr(k) { return dict[state.lang][k] || k; }
+
+    function fmtDate(dStr) {
+      const p = dStr.split('-');
+      if (p.length !== 3) return dStr;
+      const y = parseInt(p[0], 10);
+      const m = parseInt(p[1], 10) - 1;
+      const d = parseInt(p[2], 10);
+      const mName = dict[state.lang].months[m] || '';
+      return state.lang === 'ar' ? `${d} ${mName} ${y}` : `${mName} ${d}, ${y}`;
+    }
+
+    function prioBadge(p) {
+      if (p === 'high') return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">🔴 ${tr('high')}</span>`;
+      if (p === 'medium') return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">🟡 ${tr('med')}</span>`;
+      return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">🟢 ${tr('low')}</span>`;
+    }
+
+    function noteStyle(c) {
+      const m = {
+        amber: 'bg-amber-50 border-amber-200 text-amber-950',
+        indigo: 'bg-indigo-50 border-indigo-200 text-indigo-950',
+        emerald: 'bg-emerald-50 border-emerald-200 text-emerald-950',
+        rose: 'bg-rose-50 border-rose-200 text-rose-950'
+      };
+      return m[c] || m.amber;
+    }
+
+    function renderCalendar() {
+      const mName = dict[state.lang].months[state.month];
+      document.getElementById('monthYearLabel').textContent = `${mName} ${state.year}`;
+      if (state.tab === 'calendar') {
+        document.getElementById('appTitle').textContent = `${mName} ${state.year}`;
+      }
+
+      document.getElementById('weekdaysHeader').innerHTML = dict[state.lang].weekdays.map(w => `<span>${w}</span>`).join('');
+
+      const firstDay = new Date(state.year, state.month, 1).getDay();
+      const totalDays = new Date(state.year, state.month + 1, 0).getDate();
+      const grid = document.getElementById('daysGrid');
+      grid.innerHTML = '';
+
+      const selDay = parseInt(state.selectedDate.split('-')[2], 10) || 1;
+      let start = 1, end = totalDays, blanks = firstDay;
+
+      if (state.calMode === 'week') {
+        const idx = firstDay + (selDay - 1);
+        const rowStart = Math.floor(idx / 7) * 7;
+        start = Math.max(1, rowStart - firstDay + 1);
+        end = Math.min(totalDays, start + 6);
+        blanks = start === 1 ? firstDay : 0;
+      }
+
+      for (let i = 0; i < blanks; i++) {
+        const b = document.createElement('div');
+        b.className = 'h-10';
+        grid.appendChild(b);
+      }
+
+      for (let d = start; d <= end; d++) {
+        const mStr = String(state.month + 1).padStart(2, '0');
+        const dStr = String(d).padStart(2, '0');
+        const fDate = `${state.year}-${mStr}-${dStr}`;
+        const hasT = state.tasks.some(x => x.date === fDate);
+        const hasN = state.notes.some(x => x.date === fDate);
+        const isSel = state.selectedDate === fDate;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `h-10 rounded-2xl flex flex-col items-center justify-center text-xs font-bold transition ${
+          isSel ? 'bg-indigo-600 text-white shadow-md scale-105' : 'hover:bg-slate-100 text-slate-700'
+        }`;
+        btn.innerHTML = `
+          <span>${d}</span>
+          <div class="flex items-center gap-0.5 mt-0.5">
+            ${hasT ? `<span class="w-1.5 h-1.5 rounded-full ${isSel ? 'bg-white' : 'bg-indigo-600'}"></span>` : ''}
+            ${hasN ? `<span class="w-1.5 h-1.5 rounded-full ${isSel ? 'bg-amber-300' : 'bg-amber-500'}"></span>` : ''}
+          </div>
+        `;
+        btn.addEventListener('click', () => {
+          state.selectedDate = fDate;
+          render();
+        });
+        grid.appendChild(btn);
+      }
+
+      document.getElementById('selectedDateBadge').textContent = fmtDate(state.selectedDate);
+      renderDayAgenda();
+    }
+
+    function renderDayAgenda() {
+      const box = document.getElementById('dayAgendaContainer');
+      const q = state.query.trim().toLowerCase();
+      const dTasks = state.tasks.filter(x => x.date === state.selectedDate && (!q || x.title.toLowerCase().includes(q) || x.content.toLowerCase().includes(q)));
+      const dNotes = state.notes.filter(x => x.date === state.selectedDate && (!q || x.title.toLowerCase().includes(q) || x.content.toLowerCase().includes(q)));
+
+      const count = dTasks.length + dNotes.length;
+      document.getElementById('dayAgendaCount').textContent = state.lang === 'ar' ? `${count} عناصر` : `${count} items`;
+      box.innerHTML = '';
+
+      if (count === 0) {
+        box.innerHTML = `<div class="bg-white rounded-2xl p-5 text-center border border-dashed border-slate-300 text-xs text-slate-500">${tr('emptyDay')}</div>`;
+        return;
+      }
+
+      dTasks.forEach(t => {
+        const el = document.createElement('div');
+        el.className = `bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-start gap-2.5 ${t.completed ? 'opacity-65' : ''}`;
+        el.innerHTML = `
+          <button type="button" data-toggle="${t.id}" class="mt-0.5 w-5 h-5 rounded-lg border-2 flex items-center justify-center text-xs shrink-0 ${t.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}">${t.completed ? '✓' : ''}</button>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs font-bold ${t.completed ? 'line-through text-slate-400' : 'text-slate-900'} truncate">${t.title}</span>
+              <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg shrink-0">⏰ ${t.time || '10:00'}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-0.5">${t.content || ''}</p>
+            <div class="flex items-center justify-between mt-2">
+              ${prioBadge(t.priority)}
+              <div class="flex items-center gap-2.5 text-[11px] font-bold">
+                <button type="button" data-edit-t="${t.id}" class="text-indigo-600">${tr('edit')}</button>
+                <button type="button" data-del-t="${t.id}" class="text-rose-500">${tr('del')}</button>
+              </div>
+            </div>
+          </div>
+        `;
+        box.appendChild(el);
+      });
+
+      dNotes.forEach(n => {
+        const el = document.createElement('div');
+        el.className = `rounded-2xl p-3.5 border shadow-sm ${noteStyle(n.color)}`;
+        el.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <span class="text-xs font-bold">📝 ${n.title}</span>
+            <div class="flex items-center gap-2 text-[11px] font-bold">
+              <button type="button" data-edit-n="${n.id}" class="underline">${tr('edit')}</button>
+              <button type="button" data-del-n="${n.id}" class="text-rose-600 underline">${tr('del')}</button>
+            </div>
+          </div>
+          <p class="text-[11px] whitespace-pre-line leading-relaxed">${n.content}</p>
+        `;
+        box.appendChild(el);
+      });
+    }
+
+    function renderTasks() {
+      const done = state.tasks.filter(x => x.completed).length;
+      const total = state.tasks.length;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      document.getElementById('progressMainText').textContent = state.lang === 'ar' ? `تم إنجاز ${done} من ${total} مهام` : `Completed ${done} of ${total} tasks`;
+      document.getElementById('progressPct').textContent = `${pct}%`;
+      document.getElementById('progressBarFill').style.width = `${pct}%`;
+
+      const q = state.query.trim().toLowerCase();
+      const list = state.tasks.filter(t => {
+        if (q && !t.title.toLowerCase().includes(q) && !t.content.toLowerCase().includes(q)) return false;
+        if (state.filter === 'pending') return !t.completed;
+        if (state.filter === 'completed') return t.completed;
+        if (state.filter === 'today') return t.date === state.selectedDate;
+        return true;
+      });
+
+      const box = document.getElementById('tasksListContainer');
+      box.innerHTML = '';
+      if (!list.length) {
+        box.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center border border-dashed border-slate-300 text-xs text-slate-500">لا توجد مهام مطابقة.</div>`;
+        return;
+      }
+
+      list.forEach(t => {
+        const el = document.createElement('div');
+        el.className = `bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-start gap-3 ${t.completed ? 'opacity-65' : ''}`;
+        el.innerHTML = `
+          <button type="button" data-toggle="${t.id}" class="mt-0.5 w-5 h-5 rounded-lg border-2 flex items-center justify-center text-xs shrink-0 ${t.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}">${t.completed ? '✓' : ''}</button>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <h4 class="text-xs font-bold ${t.completed ? 'line-through text-slate-400' : 'text-slate-900'}">${t.title}</h4>
+              ${prioBadge(t.priority)}
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">${t.content || ''}</p>
+            <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 text-[11px]">
+              <span class="text-slate-500 font-medium">📅 ${fmtDate(t.date)} • ${t.time || '10:00'}</span>
+              <div class="flex items-center gap-3 font-bold">
+                <button type="button" data-edit-t="${t.id}" class="text-indigo-600">✏️ ${tr('edit')}</button>
+                <button type="button" data-del-t="${t.id}" class="text-rose-500">🗑️ ${tr('del')}</button>
+              </div>
+            </div>
+          </div>
+        `;
+        box.appendChild(el);
+      });
+    }
+
+    function renderNotes() {
+      const box = document.getElementById('notesListContainer');
+      box.className = state.notesView === 'grid' ? 'grid grid-cols-2 gap-2.5' : 'space-y-2.5';
+      const q = state.query.trim().toLowerCase();
+      const list = state.notes.filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+      box.innerHTML = '';
+
+      if (!list.length) {
+        box.innerHTML = `<div class="col-span-2 bg-white rounded-2xl p-6 text-center border border-dashed border-slate-300 text-xs text-slate-500">لا توجد ملاحظات محفوظة بعد.</div>`;
+        return;
+      }
+
+      list.forEach(n => {
+        const el = document.createElement('div');
+        el.className = `rounded-2xl p-3.5 border shadow-sm flex flex-col justify-between ${noteStyle(n.color)}`;
+        el.innerHTML = `
+          <div>
+            <h4 class="text-xs font-bold mb-1.5">${n.title}</h4>
+            <p class="text-[11px] whitespace-pre-line leading-relaxed mb-3">${n.content}</p>
+          </div>
+          <div class="pt-2 border-t border-black/10 flex items-center justify-between text-[10px] font-bold">
+            <span>📌 ${fmtDate(n.date)}</span>
+            <div class="flex items-center gap-2">
+              <button type="button" data-edit-n="${n.id}" class="underline">${tr('edit')}</button>
+              <button type="button" data-del-n="${n.id}" class="text-rose-700 underline">${tr('del')}</button>
+            </div>
+          </div>
+        `;
+        box.appendChild(el);
+      });
+    }
+
+    function render() {
+      document.documentElement.lang = state.lang;
+      document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+      document.getElementById('btnLangToggle').textContent = state.lang === 'ar' ? 'EN' : 'عربي';
+      document.getElementById('appSubtitle').textContent = tr('sub');
+      document.getElementById('btnJumpToday').textContent = tr('today');
+      document.getElementById('txtCal').textContent = tr('cal');
+      document.getElementById('txtTasks').textContent = tr('tasks');
+      document.getElementById('txtNotes').textContent = tr('notes');
+
+      const shell = document.getElementById('appShell');
+      const topBar = document.getElementById('topAppBar');
+      const botNav = document.getElementById('bottomNav');
+      if (state.dark) {
+        shell.classList.remove('bg-slate-50', 'text-slate-900');
+        shell.classList.add('bg-slate-900', 'text-slate-100');
+        topBar.classList.remove('bg-white', 'border-slate-200/80');
+        topBar.classList.add('bg-slate-800', 'border-slate-700');
+        botNav.classList.remove('bg-white', 'border-slate-200');
+        botNav.classList.add('bg-slate-800', 'border-slate-700');
+      } else {
+        shell.classList.add('bg-slate-50', 'text-slate-900');
+        shell.classList.remove('bg-slate-900', 'text-slate-100');
+        topBar.classList.add('bg-white', 'border-slate-200/80');
+        topBar.classList.remove('bg-slate-800', 'border-slate-700');
+        botNav.classList.add('bg-white', 'border-slate-200');
+        botNav.classList.remove('bg-slate-800', 'border-slate-700');
+      }
+
+      document.getElementById('tabScreenCalendar').classList.toggle('hidden', state.tab !== 'calendar');
+      document.getElementById('tabScreenTasks').classList.toggle('hidden', state.tab !== 'tasks');
+      document.getElementById('tabScreenNotes').classList.toggle('hidden', state.tab !== 'notes');
+
+      if (state.tab === 'calendar') {
+        document.getElementById('mainFabText').textContent = tr('fabCal');
+      } else if (state.tab === 'tasks') {
+        document.getElementById('appTitle').textContent = tr('tasks');
+        document.getElementById('mainFabText').textContent = tr('fabTask');
+      } else {
+        document.getElementById('appTitle').textContent = tr('notes');
+        document.getElementById('mainFabText').textContent = tr('fabNote');
+      }
+
+      const navMap = { calendar: 'Cal', tasks: 'Tasks', notes: 'Notes' };
+      Object.keys(navMap).forEach(k => {
+        const sfx = navMap[k];
+        const pill = document.getElementById('pill' + sfx);
+        const txt = document.getElementById('txt' + sfx);
+        if (state.tab === k) {
+          pill.className = 'px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold';
+          txt.className = 'text-[11px] font-bold text-indigo-600';
+        } else {
+          pill.className = 'px-4 py-1 rounded-full text-slate-500 text-sm';
+          txt.className = 'text-[11px] font-semibold text-slate-500';
+        }
+      });
+
+      renderCalendar();
+      renderTasks();
+      renderNotes();
+      saveStorage();
+    }
+
+    function openSheet(type, id = null) {
+      state.sheetType = type;
+      const ov = document.getElementById('sheetOverlay');
+      ov.classList.remove('hidden');
+      ov.classList.add('flex');
+
+      const idEl = document.getElementById('entryId');
+      const titleEl = document.getElementById('entryTitle');
+      const dateEl = document.getElementById('entryDate');
+      const timeEl = document.getElementById('entryTime');
+      const contentEl = document.getElementById('entryContent');
+      const delBtn = document.getElementById('btnDeleteEntry');
+
+      idEl.value = id || '';
+      dateEl.value = state.selectedDate;
+
+      if (id) {
+        delBtn.classList.remove('hidden');
+        if (type === 'task') {
+          const t = state.tasks.find(x => x.id === id);
+          if (t) {
+            titleEl.value = t.title;
+            dateEl.value = t.date;
+            timeEl.value = t.time || '10:00';
+            contentEl.value = t.content || '';
+            state.prio = t.priority || 'medium';
+          }
+        } else {
+          const n = state.notes.find(x => x.id === id);
+          if (n) {
+            titleEl.value = n.title;
+            dateEl.value = n.date;
+            contentEl.value = n.content || '';
+            state.color = n.color || 'amber';
+          }
+        }
+      } else {
+        delBtn.classList.add('hidden');
+        titleEl.value = '';
+        timeEl.value = '10:00';
+        contentEl.value = '';
+      }
+
+      syncSheetType();
+    }
+
+    function syncSheetType() {
+      const isTask = state.sheetType === 'task';
+      document.getElementById('entryTimeWrap').classList.toggle('hidden', !isTask);
+      document.getElementById('entryPriorityWrap').classList.toggle('hidden', !isTask);
+      document.getElementById('entryColorWrap').classList.toggle('hidden', isTask);
+      document.getElementById('btnTypeTask').className = isTask
+        ? 'py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-sm'
+        : 'py-2 rounded-xl text-xs font-bold text-slate-600';
+      document.getElementById('btnTypeNote').className = !isTask
+        ? 'py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-sm'
+        : 'py-2 rounded-xl text-xs font-bold text-slate-600';
+    }
+
+    function closeSheet() {
+      const ov = document.getElementById('sheetOverlay');
+      ov.classList.add('hidden');
+      ov.classList.remove('flex');
+    }
+
+    // Listeners
+    document.getElementById('btnDismissBanner').addEventListener('click', () => {
+      document.getElementById('installHintBanner').classList.add('hidden');
+    });
+
+    document.getElementById('btnDarkToggle').addEventListener('click', () => {
+      state.dark = !state.dark;
+      render();
+    });
+
+    document.getElementById('btnLangToggle').addEventListener('click', () => {
+      state.lang = state.lang === 'ar' ? 'en' : 'ar';
+      render();
+    });
+
+    document.getElementById('btnJumpToday').addEventListener('click', () => {
+      state.year = 2026;
+      state.month = 10;
+      state.selectedDate = '2026-11-03';
+      render();
+    });
+
+    document.getElementById('btnSearchToggle').addEventListener('click', () => {
+      const sb = document.getElementById('searchBarContainer');
+      sb.classList.toggle('hidden');
+      if (!sb.classList.contains('hidden')) document.getElementById('searchInput').focus();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      state.query = e.target.value;
+      render();
+    });
+
+    document.getElementById('btnClearSearch').addEventListener('click', () => {
+      state.query = '';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('searchBarContainer').classList.add('hidden');
+      render();
+    });
+
+    document.getElementById('btnPrevMonth').addEventListener('click', () => {
+      if (state.month === 0) { state.month = 11; state.year--; } else { state.month--; }
+      render();
+    });
+
+    document.getElementById('btnNextMonth').addEventListener('click', () => {
+      if (state.month === 11) { state.month = 0; state.year++; } else { state.month++; }
+      render();
+    });
+
+    document.getElementById('btnViewMonth').addEventListener('click', () => {
+      state.calMode = 'month';
+      document.getElementById('btnViewMonth').className = 'px-2.5 py-1 rounded-full bg-white shadow-sm text-indigo-700';
+      document.getElementById('btnViewWeek').className = 'px-2.5 py-1 rounded-full text-slate-600';
+      renderCalendar();
+    });
+
+    document.getElementById('btnViewWeek').addEventListener('click', () => {
+      state.calMode = 'week';
+      document.getElementById('btnViewWeek').className = 'px-2.5 py-1 rounded-full bg-white shadow-sm text-indigo-700';
+      document.getElementById('btnViewMonth').className = 'px-2.5 py-1 rounded-full text-slate-600';
+      renderCalendar();
+    });
+
+    document.getElementById('btnDayAddTask').addEventListener('click', () => openSheet('task'));
+    document.getElementById('btnDayAddNote').addEventListener('click', () => openSheet('note'));
+
+    document.getElementById('mainFab').addEventListener('click', () => {
+      openSheet(state.tab === 'notes' ? 'note' : 'task');
+    });
+
+    document.querySelectorAll('.bottom-nav-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        state.tab = b.getAttribute('data-nav');
+        render();
+      });
+    });
+
+    document.querySelectorAll('.filter-chip').forEach(c => {
+      c.addEventListener('click', () => {
+        state.filter = c.getAttribute('data-filter');
+        document.querySelectorAll('.filter-chip').forEach(x => {
+          x.className = 'filter-chip px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-600 shrink-0';
+        });
+        c.className = 'filter-chip px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-600 text-white shrink-0';
+        renderTasks();
+      });
+    });
+
+    document.getElementById('btnLayoutGrid').addEventListener('click', () => {
+      state.notesView = 'grid';
+      document.getElementById('btnLayoutGrid').className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700';
+      document.getElementById('btnLayoutList').className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-500';
+      renderNotes();
+    });
+
+    document.getElementById('btnLayoutList').addEventListener('click', () => {
+      state.notesView = 'list';
+      document.getElementById('btnLayoutList').className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700';
+      document.getElementById('btnLayoutGrid').className = 'px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-500';
+      renderNotes();
+    });
+
+    document.getElementById('mainScrollArea').addEventListener('click', (e) => {
+      const tg = e.target.closest('[data-toggle]');
+      if (tg) {
+        const t = state.tasks.find(x => x.id === tg.getAttribute('data-toggle'));
+        if (t) t.completed = !t.completed;
+        render();
+        return;
+      }
+      const et = e.target.closest('[data-edit-t]');
+      if (et) { openSheet('task', et.getAttribute('data-edit-t')); return; }
+      const dt = e.target.closest('[data-del-t]');
+      if (dt) {
+        state.tasks = state.tasks.filter(x => x.id !== dt.getAttribute('data-del-t'));
+        render();
+        return;
+      }
+      const en = e.target.closest('[data-edit-n]');
+      if (en) { openSheet('note', en.getAttribute('data-edit-n')); return; }
+      const dn = e.target.closest('[data-del-n]');
+      if (dn) {
+        state.notes = state.notes.filter(x => x.id !== dn.getAttribute('data-del-n'));
+        render();
+      }
+    });
+
+    document.getElementById('btnCloseModal').addEventListener('click', closeSheet);
+    document.getElementById('btnTypeTask').addEventListener('click', () => { state.sheetType = 'task'; syncSheetType(); });
+    document.getElementById('btnTypeNote').addEventListener('click', () => { state.sheetType = 'note'; syncSheetType(); });
+
+    document.querySelectorAll('.prio-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        state.prio = b.getAttribute('data-prio');
+        document.querySelectorAll('.prio-choice').forEach(x => x.classList.remove('border-2', 'border-indigo-600'));
+        b.classList.add('border-2', 'border-indigo-600');
+      });
+    });
+
+    document.querySelectorAll('.clr-choice').forEach(b => {
+      b.addEventListener('click', () => {
+        state.color = b.getAttribute('data-clr');
+        document.querySelectorAll('.clr-choice').forEach(x => x.classList.remove('ring-2', 'ring-slate-900'));
+        b.classList.add('ring-2', 'ring-slate-900');
+      });
+    });
+
+    document.getElementById('btnDeleteEntry').addEventListener('click', () => {
+      const id = document.getElementById('entryId').value;
+      if (!id) return;
+      if (state.sheetType === 'task') state.tasks = state.tasks.filter(x => x.id !== id);
+      else state.notes = state.notes.filter(x => x.id !== id);
+      closeSheet();
+      render();
+    });
+
+    document.getElementById('entryForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('entryId').value;
+      const title = document.getElementById('entryTitle').value.trim();
+      const date = document.getElementById('entryDate').value || state.selectedDate;
+      const time = document.getElementById('entryTime').value || '10:00';
+      const content = document.getElementById('entryContent').value.trim();
+      if (!title) return;
+
+      if (state.sheetType === 'task') {
+        const existing = state.tasks.find(x => x.id === id);
+        if (existing) {
+          existing.title = title; existing.date = date; existing.time = time; existing.content = content; existing.priority = state.prio;
+        } else {
+          state.tasks.unshift({ id: 't_' + Date.now(), title, date, time, content, priority: state.prio, completed: false });
+        }
+      } else {
+        const existing = state.notes.find(x => x.id === id);
+        if (existing) {
+          existing.title = title; existing.date = date; existing.content = content; existing.color = state.color;
+        } else {
+          state.notes.unshift({ id: 'n_' + Date.now(), title, date, content, color: state.color });
+        }
+      }
+
+      state.selectedDate = date;
+      closeSheet();
+      render();
+    });
+
+    loadStorage();
+    render();
+  </script>
+</body>
+</html>
